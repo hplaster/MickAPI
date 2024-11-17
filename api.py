@@ -20,12 +20,13 @@ def consulta():
     pergunta = dados.get('pergunta')  # Exemplo de campo com a pergunta
 
     # Consultar o Vanna com a pergunta
-    sql, df, fig, followup_questions = vn.ask(question=pergunta, allow_llm_to_see_data=True, auto_train=True)
+    # sql, df, fig, followup_questions = vn.ask(question=pergunta, allow_llm_to_see_data=True, auto_train=True)
+    sql = vn.generate_sql(question=pergunta, allow_llm_to_see_data=True, auto_train=True)
 
     # Retornar resposta ao cliente
     return jsonify({'resposta': sql})
 
-#{'resposta': resposta}
+
 # Executar a aplicação
 if __name__ == '__main__':
     app.run(port=8000, host='localhost', debug=True)
