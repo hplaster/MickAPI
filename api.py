@@ -17,14 +17,29 @@ app = Flask(__name__)
 def consulta():
 
     dados = request.json
-    pergunta = dados.get('pergunta')  # Exemplo de campo com a pergunta
+    pergunta = dados.get('pergunta')  # Campo com a pergunta
+
+    # print('Tipo da Pergunta: ', type(pergunta))
+    # print(pergunta)
 
     # Consultar o Vanna com a pergunta
     # sql, df, fig, followup_questions = vn.ask(question=pergunta, allow_llm_to_see_data=True, auto_train=True)
-    sql = vn.generate_sql(question=pergunta, allow_llm_to_see_data=True, auto_train=True)
+    sql = vn.generate_sql(question=pergunta, allow_llm_to_see_data=True)
+    print('Resposta SQL: ', sql)
+
+    df = vn.run_sql(sql)
+    print("DataFrame pelo SQL: ", df)
+    
+    resumo = vn.generate_summary(pergunta, df)
+    print("Resumo: ", resumo)
+
+    # if not sql:
+    #     return jsonify({'error': 'Não foi possível gerar uma resposta.'}), 400
+
 
     # Retornar resposta ao cliente
-    return jsonify({'resposta': sql})
+    # return jsonify({'resposta': f'Diretamente do Vanna, sua pergunta foi: {pergunta}'})
+    return jsonify({'resposta': resumo})
 
 
 # Executar a aplicação

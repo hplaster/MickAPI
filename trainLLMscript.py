@@ -32,7 +32,7 @@ vn.train(ddl="""
     CREATE TABLE IF NOT EXISTS `banquinho`.`usuarios` (
     `id_usuario` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `nome_usuario` VARCHAR(45) NULL,
-    `email_usuario` VARCHAR(255) NOT NULL,
+    `email_usuario` VARCHAR(255) NOT NULL UNIQUE,
     `senha_usuario` VARCHAR(255) NOT NULL,
     `status` SMALLINT NOT NULL DEFAULT 1,
     `perfil_acesso` VARCHAR(100) NOT NULL DEFAULT 'GERENTE'
@@ -154,215 +154,215 @@ vn.train(ddl="""
     );
 
     CREATE TABLE `banquinho`.`alertas_estoque` (
-        id_alerta INT AUTO_INCREMENT PRIMARY KEY,
-        id_produto INT,
-        mensagem VARCHAR(255),
-        data_alerta DATETIME,
-        FOREIGN KEY (id_produto) REFERENCES produtos(id_produto)
+        `id_alerta` INT AUTO_INCREMENT PRIMARY KEY,
+        `id_produto` INT,
+        `mensagem` VARCHAR(255),
+        `data_alerta` DATETIME,
+        FOREIGN KEY (`id_produto`) REFERENCES `banquinho`.`produtos` (`id_produto`)
     );
 """)
 
-vn.train(ddl="""
-    -- --------------------- --
-    -- TRIGGERS & PROCEDURES --
-    -- --------------------- --
+# vn.train(ddl="""
+#     -- --------------------- --
+#     -- TRIGGERS & PROCEDURES --
+#     -- --------------------- --
     
-    -- Gatilho para CRIAÇÃO do ESTOQUE
-    DELIMITER //
-    CREATE TRIGGER apos_insert_produto_no_estoque
-    AFTER INSERT ON produtos
-    FOR EACH ROW
-    BEGIN
-        INSERT INTO estoque ( qtde_atual, status, id_produto) 
-        VALUES (0, 1, NEW.id_produto);
-    END;
-    //
-    DELIMITER ;
+#     -- Gatilho para CRIAÇÃO do ESTOQUE
+#     DELIMITER //
+#     CREATE TRIGGER apos_insert_produto_no_estoque
+#     AFTER INSERT ON produtos
+#     FOR EACH ROW
+#     BEGIN
+#         INSERT INTO estoque ( qtde_atual, status, id_produto) 
+#         VALUES (0, 1, NEW.id_produto);
+#     END;
+#     //
+#     DELIMITER ;
 
-    -- Gatilho para SAÍDA AUTOMÁTICA após PRODUTO ser VENDIDO
-    DELIMITER //
-    CREATE TRIGGER apos_insert_produto_vendido
-    AFTER INSERT ON produtos_vendidos
-    FOR EACH ROW
-    BEGIN
-        DECLARE var_preco FLOAT;
+#     -- Gatilho para SAÍDA AUTOMÁTICA após PRODUTO ser VENDIDO
+#     DELIMITER //
+#     CREATE TRIGGER apos_insert_produto_vendido
+#     AFTER INSERT ON produtos_vendidos
+#     FOR EACH ROW
+#     BEGIN
+#         DECLARE var_preco FLOAT;
             
-        SELECT preco_venda INTO var_preco
-        FROM produtos
-        WHERE id_produto = NEW.id_produto;
+#         SELECT preco_venda INTO var_preco
+#         FROM produtos
+#         WHERE id_produto = NEW.id_produto;
         
-        INSERT INTO saida_produto (quantidade, valor_unitario, data_saida, obs_saida_produto, id_produto) 
-        VALUES (NEW.qtde_produto, var_preco, NOW(), 'VENDA PDV', NEW.id_produto);
-    END;
-    //
-    DELIMITER ;
+#         INSERT INTO saida_produto (quantidade, valor_unitario, data_saida, obs_saida_produto, id_produto) 
+#         VALUES (NEW.qtde_produto, var_preco, NOW(), 'VENDA PDV', NEW.id_produto);
+#     END;
+#     //
+#     DELIMITER ;
 
-    -- Gatilho para ENTRADA AUTOMÁTICA no ESTOQUE
-    DELIMITER //
-    CREATE TRIGGER apos_insert_entrada_produto
-    AFTER INSERT ON entrada_produto
-    FOR EACH ROW
-    BEGIN
-        UPDATE estoque
-        SET qtde_atual = qtde_atual + NEW.quantidade
-        WHERE id_produto = NEW.id_produto;
-    END;
-    //
-    DELIMITER ;
+#     -- Gatilho para ENTRADA AUTOMÁTICA no ESTOQUE
+#     DELIMITER //
+#     CREATE TRIGGER apos_insert_entrada_produto
+#     AFTER INSERT ON entrada_produto
+#     FOR EACH ROW
+#     BEGIN
+#         UPDATE estoque
+#         SET qtde_atual = qtde_atual + NEW.quantidade
+#         WHERE id_produto = NEW.id_produto;
+#     END;
+#     //
+#     DELIMITER ;
 
-    -- Gatilho para ATUALIZAÇÃO de ENTRADA no ESTOQUE
-    DELIMITER //
-    CREATE TRIGGER apos_entrada_produto_update
-    AFTER UPDATE ON entrada_produto
-    FOR EACH ROW
-    BEGIN
-        UPDATE estoque
-        SET qtde_atual = qtde_atual - OLD.quantidade + NEW.quantidade
-        WHERE id_produto = NEW.id_produto;
-    END;
-    //
-    DELIMITER ;
+#     -- Gatilho para ATUALIZAÇÃO de ENTRADA no ESTOQUE
+#     DELIMITER //
+#     CREATE TRIGGER apos_entrada_produto_update
+#     AFTER UPDATE ON entrada_produto
+#     FOR EACH ROW
+#     BEGIN
+#         UPDATE estoque
+#         SET qtde_atual = qtde_atual - OLD.quantidade + NEW.quantidade
+#         WHERE id_produto = NEW.id_produto;
+#     END;
+#     //
+#     DELIMITER ;
 
-    -- Gatilho para ATUALIZAÇÃO de SAIDA no ESTOQUE
-    DELIMITER //
-    CREATE TRIGGER apos_update_saida_produto
-    AFTER UPDATE ON saida_produto
-    FOR EACH ROW
-    BEGIN
-        UPDATE estoque
-        SET qtde_atual = qtde_atual + OLD.quantidade - NEW.quantidade
-        WHERE id_produto = NEW.id_produto;
-    END;
-    //
-    DELIMITER ;
+#     -- Gatilho para ATUALIZAÇÃO de SAIDA no ESTOQUE
+#     DELIMITER //
+#     CREATE TRIGGER apos_update_saida_produto
+#     AFTER UPDATE ON saida_produto
+#     FOR EACH ROW
+#     BEGIN
+#         UPDATE estoque
+#         SET qtde_atual = qtde_atual + OLD.quantidade - NEW.quantidade
+#         WHERE id_produto = NEW.id_produto;
+#     END;
+#     //
+#     DELIMITER ;
 
-    -- Gatilho de verificação de ESTOQUE MIN E MAX
-    DELIMITER //
-    CREATE TRIGGER apos_update_estoque
-    AFTER UPDATE ON estoque
-    FOR EACH ROW
-    BEGIN
-        DECLARE min_estoque INT;
-        DECLARE max_estoque INT;
+#     -- Gatilho de verificação de ESTOQUE MIN E MAX
+#     DELIMITER //
+#     CREATE TRIGGER apos_update_estoque
+#     AFTER UPDATE ON estoque
+#     FOR EACH ROW
+#     BEGIN
+#         DECLARE min_estoque INT;
+#         DECLARE max_estoque INT;
 
-        SELECT estoque_minimo, estoque_maximo INTO min_estoque, max_estoque
-        FROM produtos
-        WHERE id_produto = NEW.id_produto;
+#         SELECT estoque_minimo, estoque_maximo INTO min_estoque, max_estoque
+#         FROM produtos
+#         WHERE id_produto = NEW.id_produto;
 
-        -- Verifica se o estoque está abaixo do mínimo
-        IF NEW.qtde_atual < min_estoque THEN
-            INSERT INTO alertas_estoque (id_produto, mensagem, data_alerta)
-            VALUES (NEW.id_produto, 'Estoque abaixo do mínimo', NOW());
-        END IF;
+#         -- Verifica se o estoque está abaixo do mínimo
+#         IF NEW.qtde_atual < min_estoque THEN
+#             INSERT INTO alertas_estoque (id_produto, mensagem, data_alerta)
+#             VALUES (NEW.id_produto, 'Estoque abaixo do mínimo', NOW());
+#         END IF;
 
-        -- Verifica se o estoque está acima do máximo
-        IF NEW.qtde_atual > max_estoque THEN
-            INSERT INTO alertas_estoque (id_produto, mensagem, data_alerta)
-            VALUES (NEW.id_produto, 'Estoque acima do máximo', NOW());
-        END IF;
-    END;
-    //
-    DELIMITER ;
+#         -- Verifica se o estoque está acima do máximo
+#         IF NEW.qtde_atual > max_estoque THEN
+#             INSERT INTO alertas_estoque (id_produto, mensagem, data_alerta)
+#             VALUES (NEW.id_produto, 'Estoque acima do máximo', NOW());
+#         END IF;
+#     END;
+#     //
+#     DELIMITER ;
 
 
-    -- ------------------- --
-    -- GERENCIAMENTO FIFO  --
-    -- ------------------- --
+#     -- ------------------- --
+#     -- GERENCIAMENTO FIFO  --
+#     -- ------------------- --
 
-    -- Procedure para Realizar a Lógica FIFO
-    DELIMITER //
-    CREATE PROCEDURE atualizar_estoque_fifo(IN produto_id INT, IN quantidade_retirada INT)
-    BEGIN
-        DECLARE quantidade_a_retirar INT DEFAULT quantidade_retirada;
-        DECLARE qtde_disponivel INT DEFAULT 0;
-        DECLARE entrada_id INT;
+#     -- Procedure para Realizar a Lógica FIFO
+#     DELIMITER //
+#     CREATE PROCEDURE atualizar_estoque_fifo(IN produto_id INT, IN quantidade_retirada INT)
+#     BEGIN
+#         DECLARE quantidade_a_retirar INT DEFAULT quantidade_retirada;
+#         DECLARE qtde_disponivel INT DEFAULT 0;
+#         DECLARE entrada_id INT;
 
-        -- Calcula a quantidade total disponível antes de prosseguir
-        SELECT SUM(quantidade_disponivel) INTO qtde_disponivel
-        FROM entrada_produto
-        WHERE id_produto = produto_id AND quantidade_disponivel > 0;
+#         -- Calcula a quantidade total disponível antes de prosseguir
+#         SELECT SUM(quantidade_disponivel) INTO qtde_disponivel
+#         FROM entrada_produto
+#         WHERE id_produto = produto_id AND quantidade_disponivel > 0;
 
-        -- Se a quantidade total disponível for insuficiente, lança o erro
-        IF qtde_disponivel < quantidade_a_retirar THEN
-            SIGNAL SQLSTATE '45000' 
-            SET MESSAGE_TEXT = 'Quantidade insuficiente no estoque com base no método FIFO';
-        END IF;
+#         -- Se a quantidade total disponível for insuficiente, lança o erro
+#         IF qtde_disponivel < quantidade_a_retirar THEN
+#             SIGNAL SQLSTATE '45000' 
+#             SET MESSAGE_TEXT = 'Quantidade insuficiente no estoque com base no método FIFO';
+#         END IF;
 
-        -- Verifica se há pelo menos um lote disponível
-        SELECT COUNT(*) INTO qtde_disponivel
-        FROM entrada_produto
-        WHERE id_produto = produto_id AND quantidade_disponivel > 0;
+#         -- Verifica se há pelo menos um lote disponível
+#         SELECT COUNT(*) INTO qtde_disponivel
+#         FROM entrada_produto
+#         WHERE id_produto = produto_id AND quantidade_disponivel > 0;
 
-        IF qtde_disponivel = 0 THEN
-            SIGNAL SQLSTATE '45000' 
-            SET MESSAGE_TEXT = 'Não há lotes disponíveis para retirar';
-        END IF;
+#         IF qtde_disponivel = 0 THEN
+#             SIGNAL SQLSTATE '45000' 
+#             SET MESSAGE_TEXT = 'Não há lotes disponíveis para retirar';
+#         END IF;
 
-        -- Loop para retirar a quantidade desejada do estoque em ordem FIFO
-        WHILE quantidade_a_retirar > 0 DO
-            -- Seleciona o lote mais antigo com quantidade disponível
-            SELECT id_entrada_produto, quantidade_disponivel 
-            INTO entrada_id, qtde_disponivel
-            FROM entrada_produto
-            WHERE id_produto = produto_id AND quantidade_disponivel > 0
-            ORDER BY data_entrada ASC
-            LIMIT 1;
+#         -- Loop para retirar a quantidade desejada do estoque em ordem FIFO
+#         WHILE quantidade_a_retirar > 0 DO
+#             -- Seleciona o lote mais antigo com quantidade disponível
+#             SELECT id_entrada_produto, quantidade_disponivel 
+#             INTO entrada_id, qtde_disponivel
+#             FROM entrada_produto
+#             WHERE id_produto = produto_id AND quantidade_disponivel > 0
+#             ORDER BY data_entrada ASC
+#             LIMIT 1;
 
-            -- Se não encontrar nenhum lote, sai do loop
-            IF entrada_id IS NULL THEN
-                SIGNAL SQLSTATE '45000' 
-                SET MESSAGE_TEXT = 'Não há mais lotes disponíveis para retirar';
-            END IF;
+#             -- Se não encontrar nenhum lote, sai do loop
+#             IF entrada_id IS NULL THEN
+#                 SIGNAL SQLSTATE '45000' 
+#                 SET MESSAGE_TEXT = 'Não há mais lotes disponíveis para retirar';
+#             END IF;
 
-            -- Verifica se o lote selecionado é suficiente
-            IF quantidade_a_retirar <= qtde_disponivel THEN
-                UPDATE entrada_produto 
-                SET quantidade_disponivel = quantidade_disponivel - quantidade_a_retirar
-                WHERE id_entrada_produto = entrada_id;
-                SET quantidade_a_retirar = 0;
-            ELSE
-                SET quantidade_a_retirar = quantidade_a_retirar - qtde_disponivel;
-                UPDATE entrada_produto 
-                SET quantidade_disponivel = 0
-                WHERE id_entrada_produto = entrada_id;
-            END IF;
-        END WHILE;
-    END;
-    //
-    DELIMITER ;
+#             -- Verifica se o lote selecionado é suficiente
+#             IF quantidade_a_retirar <= qtde_disponivel THEN
+#                 UPDATE entrada_produto 
+#                 SET quantidade_disponivel = quantidade_disponivel - quantidade_a_retirar
+#                 WHERE id_entrada_produto = entrada_id;
+#                 SET quantidade_a_retirar = 0;
+#             ELSE
+#                 SET quantidade_a_retirar = quantidade_a_retirar - qtde_disponivel;
+#                 UPDATE entrada_produto 
+#                 SET quantidade_disponivel = 0
+#                 WHERE id_entrada_produto = entrada_id;
+#             END IF;
+#         END WHILE;
+#     END;
+#     //
+#     DELIMITER ;
 
-    -- Chama a procedure FIFO
-    DELIMITER //
-    CREATE TRIGGER antes_saida_produto_insert
-    BEFORE INSERT ON saida_produto
-    FOR EACH ROW
-    BEGIN
-        CALL atualizar_estoque_fifo(NEW.id_produto, NEW.quantidade);
-    END;
-    //
-    DELIMITER ;
+#     -- Chama a procedure FIFO
+#     DELIMITER //
+#     CREATE TRIGGER antes_saida_produto_insert
+#     BEFORE INSERT ON saida_produto
+#     FOR EACH ROW
+#     BEGIN
+#         CALL atualizar_estoque_fifo(NEW.id_produto, NEW.quantidade);
+#     END;
+#     //
+#     DELIMITER ;
 
-    -- Gatilho que soma as quantidades disponíveis e registra no estoque
-    DELIMITER //
-    CREATE TRIGGER apos_insert_saida_produto
-    AFTER INSERT ON saida_produto
-    FOR EACH ROW
-    BEGIN
-        DECLARE quantidade_total INT;
+#     -- Gatilho que soma as quantidades disponíveis e registra no estoque
+#     DELIMITER //
+#     CREATE TRIGGER apos_insert_saida_produto
+#     AFTER INSERT ON saida_produto
+#     FOR EACH ROW
+#     BEGIN
+#         DECLARE quantidade_total INT;
 
-        -- Calcula a quantidade atualizada no estoque para o produto
-        SELECT SUM(quantidade_disponivel) INTO quantidade_total
-        FROM entrada_produto
-        WHERE id_produto = NEW.id_produto;
+#         -- Calcula a quantidade atualizada no estoque para o produto
+#         SELECT SUM(quantidade_disponivel) INTO quantidade_total
+#         FROM entrada_produto
+#         WHERE id_produto = NEW.id_produto;
 
-        -- Atualiza o estoque
-        UPDATE estoque
-        SET qtde_atual = quantidade_total
-        WHERE id_produto = NEW.id_produto;
-    END;
-    //
-    DELIMITER ;
-""")
+#         -- Atualiza o estoque
+#         UPDATE estoque
+#         SET qtde_atual = quantidade_total
+#         WHERE id_produto = NEW.id_produto;
+#     END;
+#     //
+#     DELIMITER ;
+# """)
 
 #-----------------------------------------------------------------------------------------------------------------#
 
@@ -832,7 +832,7 @@ vn.train(
 ## Perguntando à IA
 Sempre que você fizer uma nova pergunta, ele encontrará os 10 dados de treinamento mais relevantes e os usará como parte do prompt do LLM para gerar o SQL.
 '''
-res = vn.ask(question="Quais usuarios estão ativos?", allow_llm_to_see_data=True, auto_train=True) # ver funções de resposta
-print(res)
+# res = vn.ask(question="Quais usuarios estão ativos?", allow_llm_to_see_data=True, auto_train=True) # ver funções de resposta
+# print(res)
 
 #-----------------------------------------------------------------------------------------------------------------#
