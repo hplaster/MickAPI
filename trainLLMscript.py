@@ -49,7 +49,7 @@ vn.train(ddl="""
     `cidade` VARCHAR(50) NULL,
     `uf` VARCHAR(2) NULL,
     `telefone_cliente` VARCHAR(11) NULL,
-    `CPF_cliente` VARCHAR(11) NULL,
+    `CPF_cliente` VARCHAR(11) NOT NULL UNIQUE,
     `status` SMALLINT NOT NULL DEFAULT 1
     );
 
@@ -158,6 +158,7 @@ vn.train(ddl="""
         `id_produto` INT,
         `mensagem` VARCHAR(255),
         `data_alerta` DATETIME,
+        `visualizado` SMALLINT NOT NULL,
         FOREIGN KEY (`id_produto`) REFERENCES `banquinho`.`produtos` (`id_produto`)
     );
 """)
@@ -367,18 +368,22 @@ vn.train(ddl="""
 #-----------------------------------------------------------------------------------------------------------------#
 
 # Documentação sobre as definições da sua empresa.
+# vn.train(documentation="""
+#     Seu nome é Mick, você é um assistente para um aplicativo de Gerenciamento de Recursos 
+# """)
+
 
 # Tabela usuarios
-vn.train(documentation="A tabela `usuarios` armazena informações dos usuários do sistema, incluindo nome, email, senha e perfil de acesso. Os perfis de acesso definem o cargo do colaborador (usuário que está utilizando o sistema). Apenas usuários com `status = 1` estão ativos no sistema.")
+vn.train(documentation="A tabela `usuarios` armazena informações dos usuários do sistema (Todos os usuários podem vender, ou seja, também são vendedores), incluindo nome, email, senha e perfil de acesso. Os perfis de acesso definem o cargo do colaborador (usuário que está utilizando o sistema). Apenas usuários com `status = 1` estão ativos no sistema.")
 
 # Tabela clientes
-vn.train(documentation='A tabela `clientes` armazena dados de clientes, incluindo nome, endereço, telefone e CPF. Clientes com `status = 1` estão ativos. Os campos de endereço incluem `cep`, `logradouro`, `numero`, `complemento`, `bairro`, `cidade`, e `uf`.')
+vn.train(documentation='A tabela `clientes` armazena dados de clientes, incluindo nome, endereço, telefone e CPF. Apenas clientes com `status = 1` estão ativos. Os campos de endereço incluem `cep`, `logradouro`, `numero`, `complemento`, `bairro`, `cidade`, e `uf`.')
 
 # Tabela categorias
 vn.train(documentation='A tabela `categorias` define categorias de produtos disponíveis. Cada produto deve estar vinculado a uma categoria.')
 
 # Tabela produtos
-vn.train(documentation='A tabela `produtos` contém informações sobre os produtos, como nome, unidade de medida, preço de venda, códigos de identificação, e estoques mínimos e máximos. Cada produto está associado a uma categoria via `id_categoria`.')
+vn.train(documentation='A tabela `produtos` contém informações sobre os produtos, como nome, unidade de medida, preço de venda, códigos de identificação, e estoques mínimos e máximos. Apenas produtos com `status = 1` estão ativos. Cada produto está associado a uma categoria via `id_categoria`.')
 
 # Tabela vendas
 vn.train(documentation='A tabela `vendas` registra todas as vendas realizadas, incluindo data, nota fiscal, valor total, método de pagamento, desconto e observações. Cada venda está vinculada a um cliente (`id_cliente`) e a um usuário (`id_usuario`).')
@@ -402,18 +407,18 @@ vn.train(documentation='A tabela `saida_produto` registra saídas de produtos do
 vn.train(documentation='A tabela `estoque` mantém o saldo atual de produtos no estoque. Alertas de estoque mínimo e máximo são gerados automaticamente com base nos limites configurados na tabela `produtos`.')
 
 # Tabela alertas_estoque
-vn.train(documentation='A tabela `alertas_estoque` armazena notificações geradas quando o estoque está abaixo do mínimo ou acima do máximo. Cada alerta está vinculado a um produto e inclui uma mensagem e a data do alerta.')
+vn.train(documentation='A tabela `alertas_estoque` armazena notificações geradas quando o estoque está abaixo do mínimo ou acima do máximo. Alertas com `visualizado = 1` foram visualizadas. Cada alerta está vinculado a um produto e inclui uma mensagem e a data do alerta.')
 
 # Regras FIFO
-vn.train(documentation='A lógica FIFO (First In, First Out) é aplicada para saídas de produtos, garantindo que os lotes mais antigos sejam consumidos primeiro. A procedure `atualizar_estoque_fifo` gerencia essa lógica.')
+# vn.train(documentation='A lógica FIFO (First In, First Out) é aplicada para saídas de produtos, garantindo que os lotes mais antigos sejam consumidos primeiro. A procedure `atualizar_estoque_fifo` gerencia essa lógica.')
 
 # Gatilhos de Estoque
-vn.train(documentation="""
-    Gatilhos que garantem a consistência do estoque:
-        - `apos_insert_entrada_produto`: Atualiza o estoque ao registrar novas entradas.
-        - `apos_insert_saida_produto`: Ajusta o estoque após saídas de produtos.
-        - `apos_update_estoque`: Gera alertas para estoques abaixo do mínimo ou acima do máximo.
-""")
+# vn.train(documentation="""
+#     Gatilhos que garantem a consistência do estoque:
+#         - `apos_insert_entrada_produto`: Atualiza o estoque ao registrar novas entradas.
+#         - `apos_insert_saida_produto`: Ajusta o estoque após saídas de produtos.
+#         - `apos_update_estoque`: Gera alertas para estoques abaixo do mínimo ou acima do máximo.
+# """)
 
 # Relacionamentos Importantes
 vn.train(documentation="""
@@ -449,8 +454,7 @@ vn.train(
     JOIN produtos_vendidos pv ON v.id_venda = pv.id_venda
     GROUP BY dia
     ORDER BY dia DESC;
-    """
-)
+""")
 
 # 2. Vendas por Produto
 vn.train(
@@ -463,8 +467,7 @@ vn.train(
     JOIN produtos p ON pv.id_produto = p.id_produto
     GROUP BY p.nome_produto
     ORDER BY total_vendido DESC;
-    """
-)
+""")
 
 # 3. Vendas por Cliente
 vn.train(
@@ -477,8 +480,7 @@ vn.train(
     JOIN clientes c ON v.id_cliente = c.id_cliente
     GROUP BY c.nome_cliente
     ORDER BY valor_total_gasto DESC;
-    """
-)
+""")
 
 # 4. Método de Pagamento Mais Usado
 vn.train(
@@ -605,6 +607,10 @@ vn.train(
     """
 )
 
+
+# PAREI AQUI --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
 # Vendas por Usuário/Vendedor
 vn.train(
     question="Quais vendedores fizeram mais vendas e quanto venderam?",
@@ -634,21 +640,21 @@ vn.train(
 )
 
 # Produtos com Alerta de Estoque
-vn.train(
-    question="Quais produtos têm alertas de estoque e por quê?",
-    sql="""
-        SELECT p.nome_produto, 
-               a.mensagem, 
-               a.data_alerta
-        FROM alertas_estoque a
-        JOIN produtos p ON a.id_produto = p.id_produto
-        ORDER BY a.data_alerta DESC;
-    """
-)
+# vn.train(
+#     question="Quais produtos têm alertas de estoque e por quê?",
+#     sql="""
+#         SELECT p.nome_produto, 
+#                a.mensagem, 
+#                a.data_alerta
+#         FROM alertas_estoque a
+#         JOIN produtos p ON a.id_produto = p.id_produto
+#         ORDER BY a.data_alerta DESC;
+#     """
+# )
 
-# Produtos Mais Vendidos e Menos Vendidos
+# Produtos Mais Vendidos
 vn.train(
-    question="Quais são os produtos mais vendidos e menos vendidos?",
+    question="Quais são os produtos mais vendidos?",
     sql="""
         SELECT p.nome_produto, 
                SUM(pv.qtde_produto) AS total_vendido
@@ -656,6 +662,19 @@ vn.train(
         JOIN produtos p ON pv.id_produto = p.id_produto
         GROUP BY p.nome_produto
         ORDER BY total_vendido DESC;
+    """
+)
+
+# Produtos Menos Vendidos
+vn.train(
+    question="Quais são os produtos menos vendidos?",
+    sql="""
+        SELECT p.nome_produto, 
+               SUM(pv.qtde_produto) AS total_vendido
+        FROM produtos_vendidos pv
+        JOIN produtos p ON pv.id_produto = p.id_produto
+        GROUP BY p.nome_produto
+        ORDER BY total_vendido ASC;
     """
 )
 
@@ -676,52 +695,52 @@ vn.train(
 )
 
 # Entradas de Produtos por Período
-vn.train(
-    question="Quais foram as entradas de produtos no estoque por período?",
-    sql="""
-        SELECT p.nome_produto, 
-               e.quantidade, 
-               e.valor_unitario, 
-               e.data_entrada, 
-               u.nome_usuario AS responsavel
-        FROM entrada_produto e
-        JOIN produtos p ON e.id_produto = p.id_produto
-        JOIN usuarios u ON e.id_usuario = u.id_usuario
-        ORDER BY e.data_entrada DESC;
-    """
-)
+# vn.train(
+#     question="Quais foram as entradas de produtos no estoque por período?",
+#     sql="""
+#         SELECT p.nome_produto, 
+#                e.quantidade, 
+#                e.valor_unitario, 
+#                e.data_entrada, 
+#                u.nome_usuario AS responsavel
+#         FROM entrada_produto e
+#         JOIN produtos p ON e.id_produto = p.id_produto
+#         JOIN usuarios u ON e.id_usuario = u.id_usuario
+#         ORDER BY e.data_entrada DESC;
+#     """
+# )
 
 # Saídas de Produtos por Período
-vn.train(
-    question="Quais foram as saídas de produtos no estoque por período?",
-    sql="""
-        SELECT p.nome_produto, 
-               s.quantidade, 
-               s.valor_unitario, 
-               s.data_saida, 
-               u.nome_usuario AS responsavel
-        FROM saida_produto s
-        JOIN produtos p ON s.id_produto = p.id_produto
-        JOIN usuarios u ON s.id_usuario = u.id_usuario
-        ORDER BY s.data_saida DESC;
-    """
-)
+# vn.train(
+#     question="Quais foram as saídas de produtos no estoque por período?",
+#     sql="""
+#         SELECT p.nome_produto, 
+#                s.quantidade, 
+#                s.valor_unitario, 
+#                s.data_saida, 
+#                u.nome_usuario AS responsavel
+#         FROM saida_produto s
+#         JOIN produtos p ON s.id_produto = p.id_produto
+#         JOIN usuarios u ON s.id_usuario = u.id_usuario
+#         ORDER BY s.data_saida DESC;
+#     """
+# )
 
 # Fluxo de Estoque (FIFO)
-vn.train(
-    question="Qual é o fluxo de estoque dos produtos usando o método FIFO?",
-    sql="""
-        SELECT p.nome_produto, 
-               e.data_entrada, 
-               e.quantidade AS quantidade_inicial,
-               (e.quantidade - e.quantidade_disponivel) AS quantidade_utilizada,
-               e.quantidade_disponivel AS quantidade_atual,
-               e.valor_unitario
-        FROM entrada_produto e
-        JOIN produtos p ON e.id_produto = p.id_produto
-        ORDER BY p.nome_produto, e.data_entrada;
-    """
-)
+# vn.train(
+#     question="Qual é o fluxo de estoque dos produtos usando o método FIFO?",
+#     sql="""
+#         SELECT p.nome_produto, 
+#                e.data_entrada, 
+#                e.quantidade AS quantidade_inicial,
+#                (e.quantidade - e.quantidade_disponivel) AS quantidade_utilizada,
+#                e.quantidade_disponivel AS quantidade_atual,
+#                e.valor_unitario
+#         FROM entrada_produto e
+#         JOIN produtos p ON e.id_produto = p.id_produto
+#         ORDER BY p.nome_produto, e.data_entrada;
+#     """
+# )
 
 # Vendas Canceladas
 vn.train(
@@ -753,18 +772,6 @@ vn.train(
         JOIN vendas_canceladas vc ON pc.id_venda_cancelada = vc.id_venda_cancelada
         JOIN usuarios u ON vc.id_usuario = u.id_usuario
         ORDER BY vc.data_venda_cancelada DESC;
-    """
-)
-
-# Clientes Ativos e Inativos
-vn.train(
-    question="Quais clientes estão ativos ou inativos?",
-    sql="""
-        SELECT nome_cliente, 
-               telefone_cliente, 
-               status
-        FROM clientes
-        ORDER BY status DESC;
     """
 )
 
@@ -836,3 +843,18 @@ Sempre que você fizer uma nova pergunta, ele encontrará os 10 dados de treinam
 # print(res)
 
 #-----------------------------------------------------------------------------------------------------------------#
+
+
+# Clientes Inativos
+vn.train(
+    question="Quais clientes estão inativos?",
+    sql="""
+        SELECT nome_cliente, 
+               telefone_cliente, 
+               status
+        FROM clientes
+        WHERE status = 0
+        ORDER BY status DESC;
+    """
+)
+
